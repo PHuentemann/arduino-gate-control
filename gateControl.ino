@@ -8,11 +8,11 @@ int pinRemoteSwitch = 2;
 int pinLightSwitch = 3;
 int pinKeypad = 4;
 
-int pinLeftOpen = 5;
-int pinLeftClose = 6;
-int pinRightOpen = 7;
-int pinRightClose = 8;
-int pinLight = 9;
+int pinLeftOpen = 7;
+int pinLeftClose = 8;
+int pinRightOpen = 9;
+int pinRightClose = 10;
+int pinLight = 11;
 
 
 int pinPot1 = 0;
