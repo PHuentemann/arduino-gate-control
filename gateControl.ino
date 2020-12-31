@@ -192,33 +192,43 @@ void loop() {
             closeTime = millis();
             closeLeftStarted = true;
         } else {
-            if (!closeRightStarted) {
-                if ((millis() - closeTime) >= timeOffset) {
-                    //Serial.println(millis() - closeTime);
-                    Serial.println("Closing Left Gate - Start");
-                    digitalWrite(pinLeftClose, LOW);
-                    closeRightStarted = true;
+            if (rightCurrent < 1000) {
+                if (!closeRightStarted) {
+                    if ((millis() - closeTime) >= timeOffset) {
+                        //Serial.println(millis() - closeTime);
+                        Serial.println("Closing Left Gate - Start");
+                        digitalWrite(pinLeftClose, LOW);
+                        closeRightStarted = true;
+                    }
+                } else {
+                    if (leftCurrent < 1000) {
+                        if (((millis() - closeTime) >= timeRuntime) && (!closeRightFinished)) {
+                            //Serial.println(millis() - closeTime);
+                            Serial.println("Closing Right Gate - Stop");
+                            digitalWrite(pinRightClose, HIGH);
+                            closeRightFinished = true;
+                        }
+                        if ((millis() - closeTime) >= (timeRuntime + timeOffset)) {
+                            //Serial.println(millis() - closeTime);
+                            Serial.println("Closing Left Gate - Stop");
+                            digitalWrite(pinLeftClose, HIGH);
+                            digitalWrite(pinLight, HIGH);
+                            closeLeftStarted = false;
+                            closeRightStarted = false;
+                            closeRightFinished = false;
+                            gateClosing = false;
+                            gateState = false;
+                            Serial.println("Gate is now closed!");
+                            delay(1000);
+                        }
+                    } else {
+                        Serial.println("Closing Left Gate - Overcurrent, Stopping");
+                        digitalWrite(pinLeftClose, HIGH);
+                    }
                 }
             } else {
-                if (((millis() - closeTime) >= timeRuntime) && (!closeRightFinished)) {
-                    //Serial.println(millis() - closeTime);
-                    Serial.println("Closing Right Gate - Stop");
-                    digitalWrite(pinRightClose, HIGH);
-                    closeRightFinished = true;
-                }
-                if ((millis() - closeTime) >= (timeRuntime + timeOffset)) {
-                    //Serial.println(millis() - closeTime);
-                    Serial.println("Closing Left Gate - Stop");
-                    digitalWrite(pinLeftClose, HIGH);
-                    digitalWrite(pinLight, HIGH);
-                    closeLeftStarted = false;
-                    closeRightStarted = false;
-                    closeRightFinished = false;
-                    gateClosing = false;
-                    gateState = false;
-                    Serial.println("Gate is now closed!");
-                    delay(1000);
-                }
+                Serial.println("Closing Right Gate - Overcurrent, Stopping");
+                digitalWrite(pinRightClose, HIGH);
             }
         }
     }
