@@ -1,1 +1,1 @@
-Arduino controlled Hörmann gate
+Arduino controlled Hörmann gate control

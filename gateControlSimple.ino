@@ -1,18 +1,13 @@
-#include <Adafruit_INA219.h>
-#include <Wire.h>
-
-Adafruit_INA219 ina219_left;
-Adafruit_INA219 ina219_right(0x41);
-
 int pinRemoteSwitch = 2;
-int pinLightSwitch = 3;
-int pinKeypad = 4;
+int pinLightSwitch = 4;
+int pinKeypad = 5;
+int pinButton = 6;
 
-int pinLeftOpen = 7;
-int pinLeftClose = 8;
-int pinRightOpen = 9;
-int pinRightClose = 10;
-int pinLight = 11;
+int pinLeftOpen = 12;
+int pinLeftClose = 11;
+int pinRightOpen = 10;
+int pinRightClose = 9;
+int pinLight = 8;
 
 int pinPot1 = 0;
 int pinPot2 = 1;
@@ -37,26 +32,20 @@ unsigned long lightTime = 0;
 bool lightState = false;
 
 bool openLeftStarted = false;
-bool openLeftFinished = false;
 bool openRightStarted = false;
 
 bool closeLeftStarted = false;
 bool closeRightStarted = false;
-bool closeRightFinished = false;
 
-int leftMaxCurrent = 2500;
-int rightMaxCurrent = 2500;
-int inrushCurrentDelay = 500;
 
-int timeRuntime = 13000;
+int timeRuntime = 12000;
 
 
 void setup() {
-    uint32_t currentFrequency;
-
     pinMode(pinRemoteSwitch, INPUT_PULLUP);
     pinMode(pinLightSwitch, INPUT_PULLUP);
     pinMode(pinKeypad, INPUT_PULLUP);
+    pinMode(pinButton, INPUT_PULLUP);
 
     pinMode(pinLeftOpen, OUTPUT);
     pinMode(pinLeftClose, OUTPUT);
@@ -74,24 +63,9 @@ void setup() {
     digitalWrite(pinLight, HIGH);
 
     Serial.begin(9600);
-
-    if (! ina219_left.begin()) {
-        Serial.println("Failed to find INA219 chip for left gate motor");
-        while (1) { delay(50); }
-    }
-    if (! ina219_right.begin()) {
-        Serial.println("Failed to find INA219 chip for right gate motor");
-        while (1) { delay(50); }
-    }
 }
 
 void loop() {
-    float leftCurrent = 0;
-    float rightCurrent = 0;
-
-    leftCurrent = ina219_left.getCurrent_mA();
-    rightCurrent = ina219_right.getCurrent_mA();
-
     float pot1 = fmap(analogRead(pinPot1), 0, 1023, 0.0, 5.0);
     float pot2 = fmap(analogRead(pinPot2), 0, 1023, 0.0, 5.0);
     
@@ -114,7 +88,6 @@ void loop() {
             delay(2000);
             closeLeftStarted = false;
             closeRightStarted = false;
-            closeRightFinished = false;
             gateClosing = false;
             gateState = false;
             gateOpening = true;
@@ -129,13 +102,9 @@ void loop() {
             lightTime = millis();
             digitalWrite(pinLight, LOW);
             lightState = true;
-            Serial.println("Left current: " + String(leftCurrent) + " mA");
-            Serial.println("Right current: " + String(rightCurrent) + " mA");
         } else {
             if ((millis() - lightTime) >= 1000) {
                 digitalWrite(pinLight, HIGH);
-                Serial.println("Left current: " + String(leftCurrent) + " mA");
-                Serial.println("Right current: " + String(rightCurrent) + " mA");
             }
             if ((millis() - lightTime) >= 2000) {
                 lightState = false;
@@ -182,13 +151,9 @@ void loop() {
             lightTime = millis();
             digitalWrite(pinLight, LOW);
             lightState = true;
-            Serial.println("Left current: " + String(leftCurrent) + " mA");
-            Serial.println("Right current: " + String(rightCurrent) + " mA");
         } else {
             if ((millis() - lightTime) >= 1000) {
                 digitalWrite(pinLight, HIGH);
-                Serial.println("Left current: " + String(leftCurrent) + " mA");
-                Serial.println("Right current: " + String(rightCurrent) + " mA");
             }
             if ((millis() - lightTime) >= 2000) {
                 lightState = false;
@@ -201,58 +166,35 @@ void loop() {
             closeRightTime = millis();
             closeRightStarted = true;
         } else {
-            if ((rightCurrent < rightMaxCurrent) && ((millis() - closeRightTime) >= inrushCurrentDelay)) {
-                if (!closeLeftStarted) {
-                    if ((millis() - closeRightTime) >= timeRuntime) {
-                        Serial.println("Closing Right Gate - Stop");
-                        digitalWrite(pinRightClose, HIGH);
-                        delay(500);
-                        Serial.println("Closing Left Gate - Start");
-                        digitalWrite(pinLeftClose, LOW);
-                        closeLeftTime = millis();
-                        closeLeftStarted = true;
-                    }
-                } else {
-                    if ((leftCurrent < leftMaxCurrent) && ((millis() - closeLeftTime) >= inrushCurrentDelay)) {
-                        if ((millis() - closeLeftTime) >= timeRuntime) {
-                            Serial.println("Closing Left Gate - Stop");
-                            digitalWrite(pinLeftClose, HIGH);
-                            digitalWrite(pinLight, HIGH);
-                            closeLeftStarted = false;
-                            closeRightStarted = false;
-                            gateClosing = false;
-                            gateState = false;
-                            closeRightTime = 0;
-                            closeLeftTime = 0;
-                            Serial.println("Gate is now closed!");
-                            delay(500);
-                        }
-                    } else {
-                        // Overcurrent protection for left gate
-                        Serial.println("Left gate current above 2500mA - Stopping!");
-                        digitalWrite(pinLeftClose, HIGH);
-                        digitalWrite(pinRightClose, HIGH);
-                        closeLeftStarted = false;
-                        closeRightStarted = false;
-                        gateClosing = false;
-                        gateState = false;
-                        delay(500);
-                    }
+            if (!closeLeftStarted) {
+                if ((millis() - closeRightTime) >= timeRuntime) {
+                    Serial.println("Closing Right Gate - Stop");
+                    digitalWrite(pinRightClose, HIGH);
+                    delay(500);
+                    Serial.println("Closing Left Gate - Start");
+                    digitalWrite(pinLeftClose, LOW);
+                    closeLeftTime = millis();
+                    closeLeftStarted = true;
                 }
             } else {
-                // Overcurrent protection for right gate
-                Serial.println("Right gate current above 2500mA - Stopping!");
-                digitalWrite(pinRightClose, HIGH);
-                digitalWrite(pinLeftClose, HIGH);
-                closeLeftStarted = false;
-                closeRightStarted = false;
-                gateClosing = false;
-                gateState = false;
-                delay(500);
+                if ((millis() - closeLeftTime) >= timeRuntime) {
+                    Serial.println("Closing Left Gate - Stop");
+                    digitalWrite(pinLeftClose, HIGH);
+                    digitalWrite(pinLight, HIGH);
+                    closeLeftStarted = false;
+                    closeRightStarted = false;
+                    gateClosing = false;
+                    gateState = false;
+                    closeRightTime = 0;
+                    closeLeftTime = 0;
+                    Serial.println("Gate is now closed!");
+                    delay(500);
+                }
             }
         }
     }
 }
+
 
 float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
